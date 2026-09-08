@@ -443,4 +443,4 @@ The seed script should create enough data for a meaningful demonstration without
 
 ---
 
-*Last updated: 2024 · SCMS college prototype*
+*Last updated: 08-Sep-2026 · SCMS prototype*
