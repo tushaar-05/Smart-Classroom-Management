@@ -5,7 +5,7 @@ Provides the student-facing dashboard and all student-level features.
 
 This is a MENU/CONTROLLER module. It:
   - Displays menus and collects input from the Student
-  - Calls domain modules (attendance.py, marks.py, etc.)
+  - Calls domain modules (attendance.py, marks.py, learning_gap.py, etc.)
   - Displays results to the terminal
 
 It does NOT:
@@ -14,24 +14,23 @@ It does NOT:
   - Perform data calculations
 
 Architecture:
-    main.py → student_menu(user) → attendance.py / marks.py → database.py → SQLite
+    main.py → student_menu(user)
+                  → attendance.py / marks.py / learning_gap.py
+                        → database.py → SQLite
 
-Currently implemented (Step 9):
+Currently implemented (Step 10):
   - View Attendance (subject-wise + overall)    [Step 8]
   - View Marks (test-wise + subject + overall)  [Step 9]
+  - Learning Gaps (rule-based detection)        [Step 10]
 
 Planned for later steps:
-  - Learning Gap Report
   - Learning Assistant
 
 The `user` parameter is the sqlite3.Row returned by authenticate_user().
 Access fields as: user["id"], user["name"], user["role"], etc.
 
 IMPORTANT: user["id"] is users.id, which is NOT the same as students.id.
-get_student_id() from attendance.py resolves this mapping for both
-attendance and marks — avoiding duplication without circular imports.
-(marks.py has no dependency on attendance.py, so importing
-get_student_id here in student.py is the clean shared point.)
+get_student_id() from attendance.py resolves this mapping for all features.
 """
 
 from modules.attendance import (
@@ -44,6 +43,7 @@ from modules.marks import (
     get_subject_performance,
     get_overall_performance,
 )
+from modules.learning_gap import get_learning_gaps
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +315,108 @@ def show_marks(user) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Learning Gap view
+# ---------------------------------------------------------------------------
+
+def show_learning_gaps(user) -> None:
+    """
+    Display the student's learning gap analysis.
+
+    Combines subject attendance and subject performance into a single
+    per-subject gap report with priority (HIGH / MEDIUM / NONE) and
+    a deterministic recommendation.
+
+    This is a RULE-BASED system — no AI, no ML, no external APIs.
+
+    Parameters:
+        user — sqlite3.Row with at least user["id"] and user["name"]
+    """
+    # ── Resolve users.id → students.id ─────────────────────────────────────────
+    student_id = get_student_id(user["id"])
+
+    if student_id is None:
+        _header("Learning Gap Analysis")
+        print()
+        print("  No student profile found for your account.")
+        print("  Please contact your administrator.")
+        _pause()
+        return
+
+    # ── Fetch gap data from learning_gap.py ─────────────────────────────────
+    gaps = get_learning_gaps(student_id)    # list of dicts
+
+    _header("Learning Gap Analysis")
+
+    if not gaps:
+        print()
+        print("  No attendance or performance data available yet.")
+        _pause()
+        return
+
+    # ── Subject summary table ──────────────────────────────────────────────────
+    print()
+    cw_subj  = 24
+    cw_att   = 15
+    cw_perf  = 15
+    cw_gap   = 7
+
+    hdr = (
+        f"  {'Subject':<{cw_subj}}"
+        f"{'Attendance':<{cw_att}}"
+        f"{'Performance':<{cw_perf}}"
+        f"{'Gap':<{cw_gap}}"
+        f"Priority"
+    )
+    print(hdr)
+    _line()
+
+    for g in gaps:
+        # Format attendance cell
+        if g["attendance_percentage"] is not None:
+            att_cell = f"{g['attendance_percentage']:.1f}% {g['attendance_status']}"
+        else:
+            att_cell = g["attendance_status"]    # "NO DATA"
+
+        # Format performance cell
+        if g["performance_percentage"] is not None:
+            # Abbreviate NEEDS IMPROVEMENT to NI for column width
+            pstat = "NI" if g["performance_status"] == "NEEDS IMPROVEMENT" else g["performance_status"]
+            perf_cell = f"{g['performance_percentage']:.1f}% {pstat}"
+        else:
+            perf_cell = g["performance_status"]  # "NO DATA"
+
+        gap_cell = "YES" if g["learning_gap"] else "NO "
+
+        print(
+            f"  {g['subject_name']:<{cw_subj}}"
+            f"{att_cell:<{cw_att}}"
+            f"{perf_cell:<{cw_perf}}"
+            f"{gap_cell:<{cw_gap}}"
+            f"{g['priority']}"
+        )
+
+    # ── Check whether any gap exists ─────────────────────────────────────────────
+    gap_subjects = [g for g in gaps if g["learning_gap"]]
+
+    print()
+    print()
+    if not gap_subjects:
+        print("  No immediate learning gaps detected.")
+        print("  Keep up the good work!")
+    else:
+        # ── Recommendations block ──────────────────────────────────────────────
+        print("  Recommendations")
+        _line()
+        for g in gap_subjects:
+            print(f"  {g['subject_name']}:")
+            print(f"    {g['recommendation']}")
+            print()
+
+    print()
+    _pause()
+
+
+# ---------------------------------------------------------------------------
 # Student dashboard
 # ---------------------------------------------------------------------------
 
@@ -337,9 +439,9 @@ def student_menu(user) -> None:
         print()
         print("  1. View Attendance")
         print("  2. View Marks")
+        print("  3. Learning Gaps")
         print()
         print("  --- (Coming soon) ---")
-        print("  3. Learning Gap Report")
         print("  4. Learning Assistant")
         print()
         print("  0. Logout")
@@ -360,7 +462,10 @@ def student_menu(user) -> None:
         elif choice == "2":
             show_marks(user)
 
-        elif choice in ("3", "4"):
+        elif choice == "3":
+            show_learning_gaps(user)
+
+        elif choice == "4":
             print()
             print("  This feature is not yet implemented.")
             print("  It will be available in a later development step.")
