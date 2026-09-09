@@ -31,6 +31,17 @@ import sqlite3
 
 from database import get_connection
 from modules.auth import create_user
+from modules.resources import (
+    get_resources,
+    get_available_resources,
+    get_resource_by_code,
+    book_resource,
+    return_resource,
+    get_user_bookings,
+    get_booking_history,
+    set_maintenance,
+    release_maintenance,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -544,6 +555,181 @@ def manage_subjects() -> None:
 
 
 # ---------------------------------------------------------------------------
+# ── RESOURCE MANAGEMENT ────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+
+def manage_resources(user) -> None:
+    """
+    Submenu for Admin resource management actions:
+      1. View Resources
+      2. Book Resource
+      3. Return Resource
+      4. My Booking History
+      5. Mark Resource for Maintenance
+      6. Release Resource from Maintenance
+      7. View Booking History
+      0. Back
+    """
+    while True:
+        _subheader("Manage Resources")
+        print("  1. View Resources")
+        print("  2. Book Resource")
+        print("  3. Return Resource")
+        print("  4. My Booking History")
+        print("  5. Mark Resource for Maintenance")
+        print("  6. Release Resource from Maintenance")
+        print("  7. View Booking History")
+        print()
+        print("  0. Back")
+        print()
+        _line()
+
+        choice = input("  Enter your choice: ").strip()
+
+        # ── 0. Back ─────────────────────────────────────────────────────────
+        if choice == "0":
+            return
+
+        # ── 1. View Resources ───────────────────────────────────────────────
+        elif choice == "1":
+            _subheader("Classroom Resources")
+            resources = get_resources()
+            if not resources:
+                print("  No resources found.")
+            else:
+                print(f"  {'Code':<10} {'Resource':<24} {'Status':<15} {'Notes'}")
+                _line(width=75)
+                for r in resources:
+                    notes = r["maintenance_notes"] or "-"
+                    print(f"  {r['resource_code']:<10} {r['name']:<24} {r['status']:<15} {notes}")
+            _pause()
+
+        # ── 2. Book Resource ────────────────────────────────────────────────
+        elif choice == "2":
+            _subheader("Book a Resource")
+            avail = get_available_resources()
+            if not avail:
+                print("  No resources are currently available for booking.")
+                _pause()
+                continue
+
+            print("  Available Resources:")
+            print(f"  {'Code':<10} {'Resource'}")
+            _line()
+            for r in avail:
+                print(f"  {r['resource_code']:<10} {r['name']}")
+            print()
+
+            code = input("  Enter resource code (or '0' to cancel): ").strip()
+            if code == "0" or not code:
+                continue
+
+            res = get_resource_by_code(code)
+            if not res:
+                print(f"\n  Resource '{code}' not found.")
+                _pause()
+                continue
+
+            success, msg = book_resource(res["id"], user["id"])
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 3. Return Resource ───────────────────────────────────────────────
+        elif choice == "3":
+            _subheader("Return a Resource")
+            code = input("  Enter resource code (or '0' to cancel): ").strip()
+            if code == "0" or not code:
+                continue
+
+            res = get_resource_by_code(code)
+            if not res:
+                print(f"\n  Resource '{code}' not found.")
+                _pause()
+                continue
+
+            success, msg = return_resource(res["id"], user["id"])
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 4. My Booking History ────────────────────────────────────────────
+        elif choice == "4":
+            _subheader("My Booking History")
+            bookings = get_user_bookings(user["id"])
+            if not bookings:
+                print("  You have no booking history.")
+            else:
+                print(f"  {'Code':<8} {'Resource':<20} {'Booked At':<21} {'Returned At':<21} {'Status'}")
+                _line(width=80)
+                for b in bookings:
+                    ret_str = b["returned_at"] if b["returned_at"] else "-"
+                    print(f"  {b['resource_code']:<8} {b['resource_name']:<20} {b['booked_at']:<21} {ret_str:<21} {b['status']}")
+            _pause()
+
+        # ── 5. Mark Resource for Maintenance ────────────────────────────────
+        elif choice == "5":
+            _subheader("Mark Resource for Maintenance")
+            code = input("  Enter resource code (or '0' to cancel): ").strip()
+            if code == "0" or not code:
+                continue
+
+            res = get_resource_by_code(code)
+            if not res:
+                print(f"\n  Resource '{code}' not found.")
+                _pause()
+                continue
+
+            if res["status"] == "In Use":
+                print(f"\n  Cannot place '{res['name']}' under maintenance because it is currently In Use.")
+                _pause()
+                continue
+
+            notes = input("  Maintenance notes (optional): ").strip()
+            success, msg = set_maintenance(res["id"], notes)
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 6. Release Resource from Maintenance ────────────────────────────
+        elif choice == "6":
+            _subheader("Release Resource from Maintenance")
+            code = input("  Enter resource code (or '0' to cancel): ").strip()
+            if code == "0" or not code:
+                continue
+
+            res = get_resource_by_code(code)
+            if not res:
+                print(f"\n  Resource '{code}' not found.")
+                _pause()
+                continue
+
+            if res["status"] != "Maintenance":
+                print(f"\n  Resource '{res['name']}' is not under maintenance (currently {res['status']}).")
+                _pause()
+                continue
+
+            success, msg = release_maintenance(res["id"])
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 7. View Complete Booking History ────────────────────────────────
+        elif choice == "7":
+            _subheader("Complete Booking History")
+            history = get_booking_history()
+            if not history:
+                print("  No booking records found in the system.")
+            else:
+                print(f"  {'Code':<8} {'Resource':<18} {'Booked By':<18} {'Booked At':<20} {'Returned At':<20} {'Status'}")
+                _line(width=95)
+                for b in history:
+                    ret_str = b["returned_at"] if b["returned_at"] else "-"
+                    print(f"  {b['resource_code']:<8} {b['resource_name']:<18} {b['user_name']:<18} {b['booked_at']:<20} {ret_str:<20} {b['status']}")
+            _pause()
+
+        else:
+            print("\n  Invalid choice.")
+            _pause()
+
+
+# ---------------------------------------------------------------------------
 # ── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
 # ---------------------------------------------------------------------------
 
@@ -567,6 +753,7 @@ def admin_menu(user) -> None:
         print("  1. Manage Users")
         print("  2. Manage Classes")
         print("  3. Manage Subjects")
+        print("  7. Manage Resources")
         print()
 
         # ── Coming in later steps ────────────────────────────────────────────
@@ -574,7 +761,6 @@ def admin_menu(user) -> None:
         print("  4. Attendance Reports")
         print("  5. Marks Reports")
         print("  6. Learning Gaps")
-        print("  7. Manage Resources")
         print("  8. Safety Alerts")
         print("  9. Analytics")
         print()
@@ -600,7 +786,10 @@ def admin_menu(user) -> None:
         elif choice == "3":
             manage_subjects()
 
-        elif choice in ("4", "5", "6", "7", "8", "9"):
+        elif choice == "7":
+            manage_resources(user)
+
+        elif choice in ("4", "5", "6", "8", "9"):
             print()
             print("  This feature is not yet implemented.")
             print("  It will be available in a later development step.")

@@ -53,6 +53,14 @@ from modules.learning_assistant import (
     get_subject_info,
     get_enrolled_subjects,
 )
+from modules.resources import (
+    get_resources,
+    get_available_resources,
+    get_resource_by_code,
+    book_resource,
+    return_resource,
+    get_user_bookings,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -613,6 +621,115 @@ def show_learning_assistant(user) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Resource Management
+# ---------------------------------------------------------------------------
+
+def show_resources_student(user) -> None:
+    """
+    Submenu for Student resource operations:
+      1. View Resources
+      2. Book Resource
+      3. Return Resource
+      4. My Booking History
+      0. Back
+    """
+    while True:
+        _header("Resource Management")
+        print("  1. View Resources")
+        print("  2. Book Resource")
+        print("  3. Return Resource")
+        print("  4. My Booking History")
+        print()
+        print("  0. Back")
+        print()
+        _line()
+
+        choice = input("  Enter your choice: ").strip()
+
+        # ── 0. Back ─────────────────────────────────────────────────────────
+        if choice == "0":
+            return
+
+        # ── 1. View Resources ───────────────────────────────────────────────
+        elif choice == "1":
+            _header("Classroom Resources")
+            resources = get_resources()
+            if not resources:
+                print("\n  No resources found.")
+            else:
+                print(f"\n  {'Code':<10} {'Resource':<24} {'Status'}")
+                _line()
+                for r in resources:
+                    print(f"  {r['resource_code']:<10} {r['name']:<24} {r['status']}")
+            _pause()
+
+        # ── 2. Book Resource ────────────────────────────────────────────────
+        elif choice == "2":
+            _header("Book a Resource")
+            avail = get_available_resources()
+            if not avail:
+                print("\n  No resources are currently available for booking.")
+                _pause()
+                continue
+
+            print("\n  Available Resources:")
+            print(f"  {'Code':<10} {'Resource'}")
+            _line()
+            for r in avail:
+                print(f"  {r['resource_code']:<10} {r['name']}")
+            print()
+
+            code = input("  Enter resource code (or '0' to cancel): ").strip()
+            if code == "0" or not code:
+                continue
+
+            res = get_resource_by_code(code)
+            if not res:
+                print(f"\n  Resource '{code}' not found.")
+                _pause()
+                continue
+
+            success, msg = book_resource(res["id"], user["id"])
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 3. Return Resource ───────────────────────────────────────────────
+        elif choice == "3":
+            _header("Return a Resource")
+            code = input("  Enter resource code (or '0' to cancel): ").strip()
+            if code == "0" or not code:
+                continue
+
+            res = get_resource_by_code(code)
+            if not res:
+                print(f"\n  Resource '{code}' not found.")
+                _pause()
+                continue
+
+            success, msg = return_resource(res["id"], user["id"])
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 4. My Booking History ────────────────────────────────────────────
+        elif choice == "4":
+            _header("My Booking History")
+            bookings = get_user_bookings(user["id"])
+            if not bookings:
+                print("\n  You have no booking history.")
+            else:
+                print(f"\n  {'Code':<8} {'Resource':<20} {'Booked At':<21} {'Returned At':<21} {'Status'}")
+                _line(width=80)
+                for b in bookings:
+                    ret_str = b["returned_at"] if b["returned_at"] else "-"
+                    print(f"  {b['resource_code']:<8} {b['resource_name']:<20} {b['booked_at']:<21} {ret_str:<21} {b['status']}")
+            _pause()
+
+        else:
+            print("\n  Invalid choice. Please enter a number from the menu.")
+            _pause()
+
+
+# ---------------------------------------------------------------------------
 # Student dashboard
 # ---------------------------------------------------------------------------
 
@@ -637,6 +754,7 @@ def student_menu(user) -> None:
         print("  2. View Marks")
         print("  3. Learning Gaps")
         print("  4. Learning Assistant")
+        print("  5. Resource Management")
         print()
         print("  0. Logout")
         print()
@@ -661,6 +779,9 @@ def student_menu(user) -> None:
 
         elif choice == "4":
             show_learning_assistant(user)
+
+        elif choice == "5":
+            show_resources_student(user)
 
         else:
             print()
