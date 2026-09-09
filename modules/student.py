@@ -5,7 +5,8 @@ Provides the student-facing dashboard and all student-level features.
 
 This is a MENU/CONTROLLER module. It:
   - Displays menus and collects input from the Student
-  - Calls domain modules (attendance.py, marks.py, learning_gap.py, etc.)
+  - Calls domain modules (attendance.py, marks.py, learning_gap.py,
+    learning_assistant.py, etc.)
   - Displays results to the terminal
 
 It does NOT:
@@ -15,16 +16,16 @@ It does NOT:
 
 Architecture:
     main.py → student_menu(user)
-                  → attendance.py / marks.py / learning_gap.py
+                  → attendance.py / marks.py
+                  → learning_gap.py
+                  → learning_assistant.py
                         → database.py → SQLite
 
-Currently implemented (Step 10):
-  - View Attendance (subject-wise + overall)    [Step 8]
-  - View Marks (test-wise + subject + overall)  [Step 9]
-  - Learning Gaps (rule-based detection)        [Step 10]
-
-Planned for later steps:
-  - Learning Assistant
+Currently implemented (Step 11):
+  - View Attendance (subject-wise + overall)         [Step 8]
+  - View Marks (test-wise + subject + overall)       [Step 9]
+  - Learning Gaps (rule-based detection)             [Step 10]
+  - Learning Assistant (rule-based fixed queries)    [Step 11]
 
 The `user` parameter is the sqlite3.Row returned by authenticate_user().
 Access fields as: user["id"], user["name"], user["role"], etc.
@@ -44,6 +45,14 @@ from modules.marks import (
     get_overall_performance,
 )
 from modules.learning_gap import get_learning_gaps
+from modules.learning_assistant import (
+    get_attendance_summary,
+    get_performance_summary,
+    get_gaps_summary,
+    get_improvement_advice,
+    get_subject_info,
+    get_enrolled_subjects,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +426,193 @@ def show_learning_gaps(user) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Learning Assistant
+# ---------------------------------------------------------------------------
+
+def show_learning_assistant(user) -> None:
+    """
+    Run the rule-based Learning Assistant for the student.
+
+    This is a FIXED-QUERY assistant, not an AI chatbot.
+    It answers predefined questions using actual database data.
+
+    Options:
+        1 — My attendance summary
+        2 — My performance / marks summary
+        3 — My learning gaps
+        4 — What should I improve?
+        5 — Ask about a specific subject
+        0 — Back to Student Dashboard
+
+    All data is fetched via learning_assistant.py domain functions.
+    This function only handles terminal I/O (input/output).
+    """
+    # Resolve users.id → students.id once for the whole session.
+    student_id = get_student_id(user["id"])
+
+    if student_id is None:
+        _header("Learning Assistant")
+        print()
+        print("  No student profile found for your account.")
+        print("  Please contact your administrator.")
+        _pause()
+        return
+
+    while True:
+        _header("Learning Assistant")
+        print(f"  Hello, {user['name']}! I can answer questions")
+        print(f"  about your attendance, marks, and learning gaps.")
+        _line()
+        print()
+        print("  1. My attendance")
+        print("  2. My marks")
+        print("  3. My learning gaps")
+        print("  4. What should I improve?")
+        print("  5. Ask about a subject")
+        print()
+        print("  0. Back")
+        print()
+        _line()
+
+        choice = input("  Enter your choice: ").strip()
+
+        # ── Option 1: Attendance summary ─────────────────────────────────────
+        if choice == "0":
+            return
+
+        elif choice == "1":
+            _header("Your Attendance")
+            summaries = get_attendance_summary(student_id)
+            if not summaries:
+                print()
+                print("  No attendance data found.")
+            else:
+                print()
+                for s in summaries:
+                    if s["attendance_percentage"] is not None:
+                        pct_str = f"{s['attendance_percentage']:.2f}%"
+                    else:
+                        pct_str = "NO DATA"
+                    print(f"  {s['subject_name']}: {pct_str} - {s['attendance_status']}")
+            _pause()
+
+        # ── Option 2: Marks / performance summary ────────────────────────────
+        elif choice == "2":
+            _header("Your Marks & Performance")
+            summaries = get_performance_summary(student_id)
+            if not summaries:
+                print()
+                print("  No marks data found.")
+            else:
+                print()
+                for s in summaries:
+                    if s["performance_percentage"] is not None:
+                        pct_str = f"{s['performance_percentage']:.2f}%"
+                    else:
+                        pct_str = "NO DATA"
+                    print(f"  {s['subject_name']}: {pct_str} - {s['performance_status']}")
+            _pause()
+
+        # ── Option 3: Learning gaps ───────────────────────────────────────────
+        elif choice == "3":
+            _header("Your Learning Gaps")
+            gaps = get_gaps_summary(student_id)
+            if not gaps:
+                print()
+                print("  No attendance or performance data found.")
+            else:
+                gap_subjects = [g for g in gaps if g["learning_gap"]]
+                if not gap_subjects:
+                    print()
+                    print("  No immediate learning gaps were detected.")
+                    print("  Keep up the good work!")
+                else:
+                    print()
+                    for g in gap_subjects:
+                        print(f"  {g['subject_name']} [{g['priority']}]")
+                        print(f"    {g['recommendation']}")
+                        print()
+            _pause()
+
+        # ── Option 4: What should I improve? ─────────────────────────────────
+        elif choice == "4":
+            _header("What Should I Improve?")
+            advice = get_improvement_advice(student_id)
+            print()
+            # Print the top-level message (may be multi-line)
+            for line in advice["message"].splitlines():
+                print(f"  {line}")
+
+            if advice["has_high"] or advice["has_medium"]:
+                print()
+                print("  Recommendations:")
+                _line()
+                shown = advice["high_gaps"] + advice["medium_gaps"]
+                for g in shown:
+                    print(f"  {g['subject_name']} [{g['priority']}]:")
+                    print(f"    {g['recommendation']}")
+                    print()
+            _pause()
+
+        # ── Option 5: Ask about a specific subject ────────────────────────────
+        elif choice == "5":
+            enrolled = get_enrolled_subjects(student_id)
+            if not enrolled:
+                print()
+                print("  No subject data found for your profile.")
+                _pause()
+                continue
+
+            _header("Ask About a Subject")
+            print()
+            print("  Your enrolled subjects:")
+            for name in enrolled:
+                print(f"    - {name}")
+            print()
+            query = input("  Enter subject name: ").strip()
+
+            if not query:
+                continue
+
+            result = get_subject_info(student_id, query)
+
+            if result is None:
+                print()
+                print("  Subject not found.")
+                print("  Please enter one of your enrolled subjects.")
+            else:
+                print()
+                print(f"  {result['subject_name']}")
+                _line()
+                # Attendance
+                if result["attendance_percentage"] is not None:
+                    att_str = f"{result['attendance_percentage']:.2f}%"
+                else:
+                    att_str = "NO DATA"
+                print(f"  Attendance   : {att_str} - {result['attendance_status']}")
+
+                # Performance
+                if result["performance_percentage"] is not None:
+                    perf_str = f"{result['performance_percentage']:.2f}%"
+                else:
+                    perf_str = "NO DATA"
+                print(f"  Performance  : {perf_str} - {result['performance_status']}")
+
+                print(f"  Priority     : {result['priority']}")
+                print()
+                print(f"  Recommendation:")
+                print(f"    {result['recommendation']}")
+
+            _pause()
+
+        else:
+            print()
+            print("  I can currently help with attendance, marks, learning gaps,")
+            print("  and subject improvement. Please enter a number from 0 to 5.")
+            _pause()
+
+
+# ---------------------------------------------------------------------------
 # Student dashboard
 # ---------------------------------------------------------------------------
 
@@ -440,8 +636,6 @@ def student_menu(user) -> None:
         print("  1. View Attendance")
         print("  2. View Marks")
         print("  3. Learning Gaps")
-        print()
-        print("  --- (Coming soon) ---")
         print("  4. Learning Assistant")
         print()
         print("  0. Logout")
@@ -466,10 +660,7 @@ def student_menu(user) -> None:
             show_learning_gaps(user)
 
         elif choice == "4":
-            print()
-            print("  This feature is not yet implemented.")
-            print("  It will be available in a later development step.")
-            _pause()
+            show_learning_assistant(user)
 
         else:
             print()
