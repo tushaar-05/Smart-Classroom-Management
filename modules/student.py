@@ -5,7 +5,7 @@ Provides the student-facing dashboard and all student-level features.
 
 This is a MENU/CONTROLLER module. It:
   - Displays menus and collects input from the Student
-  - Calls domain modules (attendance.py, future: marks.py, etc.)
+  - Calls domain modules (attendance.py, marks.py, etc.)
   - Displays results to the terminal
 
 It does NOT:
@@ -14,13 +14,13 @@ It does NOT:
   - Perform data calculations
 
 Architecture:
-    main.py → student_menu(user) → attendance.py → database.py → SQLite
+    main.py → student_menu(user) → attendance.py / marks.py → database.py → SQLite
 
-Currently implemented (Step 8):
-  - View Attendance (subject-wise + overall)
+Currently implemented (Step 9):
+  - View Attendance (subject-wise + overall)    [Step 8]
+  - View Marks (test-wise + subject + overall)  [Step 9]
 
 Planned for later steps:
-  - View Marks
   - Learning Gap Report
   - Learning Assistant
 
@@ -28,13 +28,21 @@ The `user` parameter is the sqlite3.Row returned by authenticate_user().
 Access fields as: user["id"], user["name"], user["role"], etc.
 
 IMPORTANT: user["id"] is users.id, which is NOT the same as students.id.
-attendance.py.get_student_id() resolves this mapping.
+get_student_id() from attendance.py resolves this mapping for both
+attendance and marks — avoiding duplication without circular imports.
+(marks.py has no dependency on attendance.py, so importing
+get_student_id here in student.py is the clean shared point.)
 """
 
 from modules.attendance import (
     get_student_id,
     get_overall_attendance,
     get_subject_attendance,
+)
+from modules.marks import (
+    get_test_marks,
+    get_subject_performance,
+    get_overall_performance,
 )
 
 
@@ -172,6 +180,141 @@ def show_attendance(user) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Marks & Performance viewing
+# ---------------------------------------------------------------------------
+
+def show_marks(user) -> None:
+    """
+    Display the student's marks and academic performance.
+
+    Three sections are shown:
+      1. Overall performance  (raw SUM totals across all tests)
+      2. Subject performance  (weighted SUM per subject)
+      3. Individual tests     (one row per test, sorted by subject + date)
+
+    Student ID mapping:
+      user["id"] (users.id) → get_student_id() → students.id
+      marks.student_id references students.id, NOT users.id.
+      We reuse get_student_id() imported from attendance.py — this is
+      a shared utility that both features need, so it lives in one place.
+
+    Parameters:
+        user — sqlite3.Row with at least user["id"] and user["name"]
+    """
+    # ── Resolve users.id → students.id ────────────────────────────────────────
+    student_id = get_student_id(user["id"])
+
+    if student_id is None:
+        _header("Marks & Performance")
+        print()
+        print("  No student profile found for your account.")
+        print("  Please contact your administrator.")
+        _pause()
+        return
+
+    # ── Fetch data from marks.py ───────────────────────────────────────────────
+    overall  = get_overall_performance(student_id)    # dict or None
+    subjects = get_subject_performance(student_id)    # list of dicts
+    tests    = get_test_marks(student_id)             # list of dicts
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    _header("Marks & Performance")
+
+    # ── Section 1: Overall performance ────────────────────────────────────────
+    print()
+    print("  Overall Performance")
+    _line()
+
+    if overall is None:
+        print("  No marks records found.")
+        _pause()
+        return
+
+    print(f"  Obtained  : {overall['obtained']}")
+    print(f"  Maximum   : {overall['maximum']}")
+    print(f"  Percent   : {overall['percentage']:.2f}%")
+    print(f"  Status    : {overall['status']}")
+
+    if overall["status"] == "NEEDS IMPROVEMENT":
+        print()
+        print("  ⚠  Your overall performance is below 50%.")
+        print("     Consider reviewing your study plan.")
+
+    # ── Section 2: Subject-wise performance ───────────────────────────────────
+    print()
+    print()
+    print("  Subject Performance")
+    _line()
+
+    if not subjects:
+        print("  No subject marks found.")
+    else:
+        # Column widths
+        cw_subj = 26
+        cw_obt  = 11
+        cw_max  = 10
+        cw_pct  = 10
+
+        hdr = (
+            f"  {'Subject':<{cw_subj}}"
+            f"{'Obtained':<{cw_obt}}"
+            f"{'Maximum':<{cw_max}}"
+            f"{'Percent':<{cw_pct}}"
+            f"Status"
+        )
+        print(hdr)
+        _line()
+
+        for s in subjects:
+            pct_label = f"{s['percentage']:.2f}%"
+            print(
+                f"  {s['subject_name']:<{cw_subj}}"
+                f"{s['obtained']:<{cw_obt}}"
+                f"{s['maximum']:<{cw_max}}"
+                f"{pct_label:<{cw_pct}}"
+                f"{s['status']}"
+            )
+
+    # ── Section 3: Test-wise marks ─────────────────────────────────────────────
+    print()
+    print()
+    print("  Test-wise Marks")
+    _line()
+
+    if not tests:
+        print("  No test records found.")
+    else:
+        cw_subj  = 26
+        cw_test  = 16
+        cw_score = 12
+        cw_pct   = 10
+
+        hdr = (
+            f"  {'Subject':<{cw_subj}}"
+            f"{'Test':<{cw_test}}"
+            f"{'Score':<{cw_score}}"
+            f"{'Percent':<{cw_pct}}"
+            f"Date"
+        )
+        print(hdr)
+        _line()
+
+        for t in tests:
+            score_label = f"{t['marks_obtained']}/{t['max_marks']}"
+            pct_label   = f"{t['percentage']:.2f}%"
+            print(
+                f"  {t['subject_name']:<{cw_subj}}"
+                f"{t['test_name']:<{cw_test}}"
+                f"{score_label:<{cw_score}}"
+                f"{pct_label:<{cw_pct}}"
+                f"{t['date']}"
+            )
+
+    print()
+    _pause()
+
+
+# ---------------------------------------------------------------------------
 # Student dashboard
 # ---------------------------------------------------------------------------
 
@@ -193,9 +336,9 @@ def student_menu(user) -> None:
         _line()
         print()
         print("  1. View Attendance")
+        print("  2. View Marks")
         print()
         print("  --- (Coming soon) ---")
-        print("  2. View Marks")
         print("  3. Learning Gap Report")
         print("  4. Learning Assistant")
         print()
@@ -214,7 +357,10 @@ def student_menu(user) -> None:
         elif choice == "1":
             show_attendance(user)
 
-        elif choice in ("2", "3", "4"):
+        elif choice == "2":
+            show_marks(user)
+
+        elif choice in ("3", "4"):
             print()
             print("  This feature is not yet implemented.")
             print("  It will be available in a later development step.")
