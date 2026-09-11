@@ -99,28 +99,46 @@ Administrators can:
 ## Screenshots
 
 ### 1. Login
-<!-- Add screenshot here -->
+<!-- <img width="801" height="304" alt="Screenshot 2026-09-12 at 12 54 13 AM" src="https://github.com/user-attachments/assets/938ad4e0-8cca-4498-b8c0-8b9af7b1398b" /> -->
+<img width="835" height="307" alt="Screenshot 2026-09-12 at 12 55 10 AM" src="https://github.com/user-attachments/assets/db07f54f-1f21-4adc-bfba-53e3fe0d0834" />
+
 
 ### 2. Student Dashboard
-<!-- Add screenshot here -->
+<img width="814" height="626" alt="Screenshot 2026-09-12 at 12 57 29 AM" src="https://github.com/user-attachments/assets/a0194d00-ca42-4165-acbc-937be92d84f3" />
+
+
 
 ### 3. Attendance
 <!-- Add screenshot here -->
+<img width="583" height="723" alt="Screenshot 2026-09-12 at 12 58 18 AM" src="https://github.com/user-attachments/assets/dcf3d73b-f065-4fe9-809a-86c6e8053176" />
+
 
 ### 4. Learning Gaps / Learning Assistant
-<!-- Add screenshot here -->
+<img width="509" height="778" alt="Screenshot 2026-09-12 at 12 59 12 AM" src="https://github.com/user-attachments/assets/07f09935-6c0e-4ee5-b300-b0f8c794cba0" />
+
 
 ### 5. Resource Management
 <!-- Add screenshot here -->
+<img width="313" height="805" alt="Screenshot 2026-09-12 at 1 00 56 AM" src="https://github.com/user-attachments/assets/2d5798a2-87d1-4894-b72d-366942c1f1a6" />
+
 
 ### 6. Safety & Security Alerts
 <!-- Add screenshot here -->
+<img width="555" height="767" alt="Screenshot 2026-09-12 at 1 01 23 AM" src="https://github.com/user-attachments/assets/5a7ac1ac-f8c2-4aaf-ada6-65add38cf8b5" />
 
-### 7. Teacher Analytics
-<!-- Add screenshot here -->
+### 7. Teacher Dashboard
+<img width="505" height="538" alt="Screenshot 2026-09-12 at 1 02 47 AM" src="https://github.com/user-attachments/assets/14915515-9e2d-44a6-ae85-f5f3150d25f1" />
 
-### 8. Admin Dashboard
+
+### 8. Teacher Analytics
 <!-- Add screenshot here -->
+<img width="421" height="866" alt="Screenshot 2026-09-12 at 1 03 14 AM" src="https://github.com/user-attachments/assets/438950d4-04b1-4096-a473-f69835dbacbe" />
+
+
+### 9. Admin Dashboard
+<!-- Add screenshot here -->
+<img width="380" height="365" alt="Screenshot 2026-09-12 at 1 03 48 AM" src="https://github.com/user-attachments/assets/5bed6524-d8be-4394-822a-3e54b69e7e2c" />
+
 
 ---
 
