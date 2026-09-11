@@ -174,7 +174,7 @@ Maintains the history of every resource booking and return. An open booking (res
 |---------------|---------|----------------------------|---------------------------------------------------|
 | `id`          | INTEGER | PK, AUTOINCREMENT          | Surrogate primary key                             |
 | `resource_id` | INTEGER | NOT NULL, FK → resources(id)| The resource being booked                        |
-| `booked_by`   | INTEGER | NOT NULL, FK → users(id)   | The teacher or admin who booked the resource      |
+| `booked_by`   | INTEGER | NOT NULL, FK → users(id)   | The user (student, teacher, or admin) who booked the resource |
 | `booked_at`   | TEXT    | NOT NULL                   | Booking datetime (`YYYY-MM-DD HH:MM:SS`)         |
 | `returned_at` | TEXT    | —                          | Return datetime — NULL means not yet returned     |
 
@@ -184,7 +184,7 @@ Maintains the history of every resource booking and return. An open booking (res
 
 ### 9. `alerts`
 
-Records safety and security incidents. Alerts are created by teachers or admins and resolved exclusively by admins.
+Records safety and security incidents. Alerts can be created by students, teachers, or admins and resolved by teachers or admins.
 
 | Column        | Type    | Constraints              | Purpose                                             |
 |---------------|---------|--------------------------|-----------------------------------------------------|
@@ -193,9 +193,9 @@ Records safety and security incidents. Alerts are created by teachers or admins 
 | `location`    | TEXT    | NOT NULL                 | Where the incident occurred (e.g. `"Room 204"`)    |
 | `description` | TEXT    | —                        | Optional free-text detail                           |
 | `status`      | TEXT    | NOT NULL, CHECK          | One of: `Active`, `Resolved`                        |
-| `created_by`  | INTEGER | NOT NULL, FK → users(id) | User who raised the alert                           |
+| `created_by`  | INTEGER | NOT NULL, FK → users(id) | User who raised the alert (student, teacher, or admin) |
 | `created_at`  | TEXT    | NOT NULL                 | Alert creation datetime (`YYYY-MM-DD HH:MM:SS`)    |
-| `resolved_by` | INTEGER | FK → users(id)           | Admin who resolved the alert — NULL until resolved  |
+| `resolved_by` | INTEGER | FK → users(id)           | Teacher or admin who resolved the alert — NULL until resolved |
 | `resolved_at` | TEXT    | —                        | Resolution datetime — NULL until resolved           |
 
 **Default status:** `Active`
@@ -304,7 +304,7 @@ Maintenance→  Available    (admin clears maintenance)
 | `Active`   | Incident has been reported and not yet resolved   |
 | `Resolved` | Admin has marked the incident as resolved         |
 
-Only an **admin** can transition an alert from `Active` to `Resolved`. Resolution always records `resolved_by` and `resolved_at`.
+Both **teachers and admins** can transition an alert from `Active` to `Resolved` (students can only report). Resolution always records `resolved_by` and `resolved_at`.
 
 ---
 

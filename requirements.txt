@@ -1,0 +1,5 @@
+# SCMS — Smart Classroom Management System
+# -----------------------------------------------------------
+# Python Standard Library only (Python 3.9+).
+# No external dependencies or third-party packages are required.
+# Standard modules used: sqlite3, hashlib, secrets, hmac, getpass, sys, os.

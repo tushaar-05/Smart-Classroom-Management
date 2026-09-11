@@ -1,272 +1,213 @@
-<div align="center">
+# Smart Classroom Management System (SCMS)
 
-# SCMS
-### Smart Classroom Management System
-
-*A terminal-based platform for attendance, performance, resources, and safety — built for the classroom, not the cloud.*
-
-![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
-![SQLite](https://img.shields.io/badge/Database-SQLite-07405E?logo=sqlite&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Prototype-F5A623)
-![License](https://img.shields.io/badge/License-Educational-2E8B57)
-
-[Overview](#overview) • [Features](#features) • [Modules](#modules) • [Setup](#getting-started) • [Roadmap](#roadmap)
-
-</div>
+A simple, terminal-based college prototype for managing classroom attendance, student performance, equipment bookings, safety alerts, and institutional analytics — built with Python and SQLite.
 
 ---
 
 ## Overview
 
-Most classrooms still run on paper — attendance registers, mark sheets, verbal handoffs for shared equipment, and ad-hoc incident reports. It works, but it's slow, error-prone, and impossible to analyze later.
+Most classrooms rely on paper attendance registers, printed mark sheets, and manual logbooks for shared equipment. **SCMS** is a lightweight command-line project that centralizes these day-to-day operations into one local, role-based application.
 
-**SCMS replaces that with one role-based system.** Students, teachers, and admins each get a scoped view of exactly what they need, all backed by a single local database.
+Students, teachers, and administrators each get a focused dashboard tailored to their responsibilities, backed by a local SQLite database.
 
-> **Why a terminal app, not a website?** No servers, no hosting, no frontend to maintain — just the logic, running anywhere Python runs. The goal here is to prove the workflow, not ship a production stack.
-
-<table>
-<tr>
-<td><b>Year</b></td><td>2024</td>
-<td><b>Domain</b></td><td>Smart Automation</td>
-</tr>
-<tr>
-<td><b>Organisation</b></td><td>Govt. of NCT of Delhi</td>
-<td><b>Department</b></td><td>Education</td>
-</tr>
-</table>
+> **Note:** This project is an educational terminal prototype. It runs entirely on the **Python standard library** with zero external packages. It does not require any cloud servers, internet connection, or web frameworks.
 
 ---
 
-## Features
+## Role Permissions & Features
 
-Every action in SCMS is gated by role.
+Every user belongs to one of three roles: **Student**, **Teacher**, or **Admin**.
 
-| Capability | Student | Teacher | Admin |
+| Feature / Capability | Student | Teacher | Admin |
 |---|:---:|:---:|:---:|
-| View profile & attendance | ✅ | ✅ | ✅ |
-| Mark attendance | — | ✅ | ✅ |
-| View marks | ✅ | ✅ | ✅ |
-| Enter marks | — | ✅ | ✅ |
-| Learning gap analysis | ✅ | ✅ | ✅ |
-| Learning assistant | ✅ | — | — |
-| Book / return resources | — | ✅ | ✅ |
-| Create safety alert | — | ✅ | ✅ |
-| Resolve safety alert | — | — | ✅ |
-| Manage students / teachers / classes | — | — | ✅ |
+| **View Own Attendance** (overall & subject-wise) | ✅ | — | — |
+| **View Own Marks & Performance** (test scores & averages) | ✅ | — | — |
+| **View Learning Gaps & Recommendations** | ✅ | — | — |
+| **Rule-Based Learning Assistant** (offline Q&A) | ✅ | — | — |
+| **Book & Return Resources** | ✅ | ✅ | ✅ |
+| **View Personal Booking History** | ✅ | ✅ | ✅ |
+| **Mark Resource for Maintenance & Release** | — | ✅ | ✅ |
+| **View Complete Resource Booking History** (all users) | — | ✅ | ✅ |
+| **Report Safety Alert** (simulated incident) | ✅ | ✅ | ✅ |
+| **Resolve Safety Alert** | — | ✅ | ✅ |
+| **Institutional Analytics & Reports** (6 aggregate views) | — | ✅ | ✅ |
+| **Manage Users** (view & create accounts) | — | — | ✅ |
+| **Manage Classes & Subjects** (view & create) | — | — | ✅ |
+
+*(Note: Manual teacher attendance marking and mark entry are designated as coming soon on the future roadmap; attendance and marks are currently populated via the database seeder.)*
 
 ---
 
-## Modules
+## Key Modules & Logic
 
-<details>
-<summary><b>Attendance</b> — recording, reporting, and low-attendance flags</summary><br>
+### 1. Attendance Tracking
+Students can view their subject-wise and overall attendance percentage, along with total present/absent class counts.
+- **Threshold Rule:** Attendance **< 75%** is flagged as `LOW`. Attendance **≥ 75%** is marked `GOOD`.
 
-Teachers mark attendance per student, per class, per date. SCMS rolls this up into subject-wise and overall percentages, flagging anything under **75%** as `LOW`.
+### 2. Academic Performance & Marks
+Students can view individual test scores (Unit Test 1, Midterm, Final) and subject averages.
+- **Threshold Rule:** Performance **< 50%** is flagged as `NEEDS IMPROVEMENT`. Performance **≥ 50%** is marked `GOOD`.
 
-```
-ATTENDANCE REPORT
-----------------------------------------
-Subject          Present   Total    %
-----------------------------------------
-Mathematics         18       20     90%
-Programming         16       20     80%
-Physics             17       20     85%
+### 3. Learning Gap Detection
+A deterministic, rule-based algorithm (no machine learning) that evaluates both attendance and performance data to highlight subjects where the student needs extra support:
+- `HIGH` Priority: Both attendance < 75% **and** marks < 50% (attendance & conceptual gap).
+- `MEDIUM` Priority: Either attendance < 75% **or** marks < 50%.
+- `NONE`: Attendance ≥ 75% **and** marks ≥ 50% (on track).
 
-Overall Attendance: 85%   Status: GOOD
-```
-</details>
+### 4. Rule-Based Learning Assistant
+An offline helper for students that answers 5 predefined queries directly from their local data:
+1. *My attendance* — summary of all enrolled subjects and statuses.
+2. *My marks* — subject-wise test performance.
+3. *My learning gaps* — detected priority gaps with tailored study suggestions.
+4. *What should I improve?* — actionable study recommendations for weak areas.
+5. *Ask about a subject* — lookup attendance, score, and gap status for a specific subject (e.g., `Mathematics`). Safely rejects invalid subjects.
 
-<details>
-<summary><b>Academic Performance</b> — marks entry and subject averages</summary><br>
+### 5. Resource Management
+Tracks shared classroom equipment (projectors, smart boards, computers, speakers, HDMI kits).
+- **Statuses:** `Available`, `In Use`, `Maintenance`.
+- **Workflow:**
+  - Any user can book an `Available` resource (status becomes `In Use`).
+  - The booking user returns the resource (status reverts to `Available`).
+  - Teachers and Admins can place an item into `Maintenance` with notes, and release it when repaired.
+  - Students see their own booking history; Teachers and Admins see complete booking logs.
 
-Teachers enter marks by subject and test. SCMS computes averages and flags any subject under **50%** as `NEEDS IMPROVEMENT`. This feeds directly into learning gap detection.
-</details>
+### 6. Safety & Security Alerts
+A software simulation representing campus safety incident reporting:
+- **Incident Types:** `Fire`, `Unauthorized Access`, `Medical`, `Other`.
+- **Workflow:**
+  - Students, teachers, and admins can report active incidents with location and description.
+  - Teachers and admins can review active alerts and mark them as `Resolved`.
+  - Full incident history is maintained.
 
-<details>
-<summary><b>Learning Gap Detection</b> — rule-based, not ML</summary><br>
+### 7. Institutional Analytics & Reports
+Provides 6 aggregate statistics for teachers and administrators:
+1. **Dashboard Summary:** Total counts of students, classes, subjects, resources, and alerts.
+2. **Attendance Analytics:** Institution-wide attendance rate and per-subject averages.
+3. **Performance Analytics:** Institution-wide score average and pass/fail distributions.
+4. **Student Performance Summary:** Student-by-student matrix showing attendance and marks status.
+5. **Resource Usage:** Most frequently booked resources and current inventory status.
+6. **Safety Alert Statistics:** Breakdown of incidents by type and resolution status.
 
-Deterministic rules over marks and attendance data — no trained model. Transparent, testable, and demo-safe.
-
-```
-LEARNING GAPS
-----------------------------------------
-Programming : Good
-Mathematics  : Needs Improvement
-Physics      : Needs Improvement
-
-Suggested Focus: Matrix Operations, Linear Equations, Mechanics
-```
-</details>
-
-<details>
-<summary><b>Learning Assistant</b> — offline Q&A for students</summary><br>
-
-Answers a fixed set of queries using the student's own stored data. No external API calls:
-
-```
-> Which subject should I focus on?
-> What are my weak subjects?
-> Why is my performance low?
-> Give me study suggestions
-```
-
-A live LLM-backed version is on the [roadmap](#roadmap) once the core data pipeline is proven out.
-</details>
-
-<details>
-<summary><b>Resource Management</b> — projectors, boards, and everything in between</summary><br>
-
-Every resource is `Available`, `In Use`, or `Maintenance`. Teachers and admins book, return, and flag equipment.
-
-```
-CLASSROOM RESOURCES
-----------------------------------------
-ID     Resource          Status
-----------------------------------------
-R01    Projector         Available
-R02    Smart Board       In Use
-R03    Computer          Available
-R04    Microphone        Maintenance
-```
-</details>
-
-<details>
-<summary><b>Safety Alerts</b> — incident logging and resolution</summary><br>
-
-Fire, unauthorized access, medical, or other incidents — logged with location and description, resolved by admins. Simulates the workflow only; no hardware integration.
-
-```
-ACTIVE ALERTS
-----------------------------------------
-ID     Type              Location
-----------------------------------------
-A001   FIRE              Room 204
-A002   MEDICAL           Room 101
-```
-</details>
-
-<details>
-<summary><b>Analytics</b> — the classroom, at a glance</summary><br>
-
-```
-CLASSROOM ANALYTICS
-========================================
-Total Students          : 45
-Average Attendance      : 84.6%
-Average Marks           : 76.3%
-Low Attendance Students : 6
-Students Needing Help   : 8
-Most Used Resource      : Projector
-```
-</details>
+### 8. Admin Management
+Administrators can:
+- View all system users (passwords and password hashes are never displayed).
+- Add new student, teacher, or admin accounts with secure PBKDF2-HMAC-SHA256 password hashing.
+- View and create classes and subjects.
 
 ---
 
-## Architecture
+## Tech Stack & Architecture
+
+- **Language:** Python 3.9+
+- **Database:** SQLite 3 (`data/scms.db`)
+- **Interface:** Command-Line Interface (CLI / Terminal)
+- **External Dependencies:** **None** (uses standard library modules: `sqlite3`, `hashlib`, `secrets`, `hmac`, `getpass`, `sys`, `os`).
 
 ```
-              Terminal / CLI
-                    │
-             Application Logic
-                    │
-   ┌──────────┬──────────┬──────────┐
-   │Attendance│Resources │Analytics │  Alerts
-   └──────────┴──────────┴──────────┘
-                    │
-             SQLite Database
+                    Terminal / CLI (main.py)
+                                │
+                    Authentication (auth.py)
+                                │
+            ┌───────────────────┼───────────────────┐
+            ▼                   ▼                   ▼
+      Student Menu         Teacher Menu         Admin Menu
+      (student.py)         (teacher.py)         (admin.py)
+            │                   │                   │
+            └───────────┬───────┴───────────┬───────┘
+                        ▼                   ▼
+                 Domain Modules       Domain Modules
+              (attendance, marks,   (resources, alerts,
+                learning_gap, etc.)     analytics)
+                        │                   │
+                        └─────────┬─────────┘
+                                  ▼
+                        Database Layer (database.py)
+                                  ▼
+                         SQLite (data/scms.db)
 ```
-
-Runs entirely locally — no server, no cloud dependency, single-file database. Full schema and threshold rules live in [`docs/SCHEMA.md`](docs/SCHEMA.md).
-
----
-
-## Tech Stack
-
-| | |
-|---|---|
-| **Language** | Python 3.9+ |
-| **Database** | SQLite |
-| **Interface** | CLI |
-| **VCS** | Git |
 
 ---
 
 ## Project Structure
 
 ```
-SCMS/
-├── main.py                     # Entry point, login routing, role-based menus
-├── database.py                 # Connection handling, schema init
-├── seed.py                     # Sample data for demos
-├── requirements.txt
-├── modules/
-│   ├── auth.py                 # Login, password hashing
-│   ├── student.py               # Student menu & actions
-│   ├── teacher.py                # Teacher menu & actions
-│   ├── admin.py                   # Admin menu & actions
-│   ├── attendance.py               # Marking & reporting
-│   ├── marks.py                     # Entry & performance calc
-│   ├── learning_gap.py               # Rule-based gap detection
-│   ├── learning_assistant.py          # Rule-based Q&A
-│   ├── resources.py                    # Booking / return / maintenance
-│   ├── alerts.py                        # Safety alert lifecycle
-│   └── analytics.py                      # Aggregate reporting
+SmartClassroom/
+├── main.py                     # Application entry point, login loop & role routing
+├── database.py                 # SQLite connection handling & 9-table schema init
+├── seed.py                     # Populates demo database with realistic test data
+├── requirements.txt            # Project dependencies note (standard library only)
+├── .gitignore                  # Ignores data/*.db, __pycache__/, *.pyc, venv/
 ├── docs/
-│   └── SCHEMA.md                # Full DB schema + threshold rules
-└── data/
-    └── scms.db
+│   └── SCHEMA.md               # Detailed database schema reference & constraints
+└── modules/
+    ├── auth.py                 # PBKDF2 password hashing & authentication
+    ├── student.py              # Student dashboard & menus
+    ├── teacher.py              # Teacher dashboard & menus
+    ├── admin.py                # Admin dashboard & management menus
+    ├── attendance.py           # Attendance percentage & threshold calculations
+    ├── marks.py                # Test marks aggregation & performance calculations
+    ├── learning_gap.py         # Rule-based gap detection logic
+    ├── learning_assistant.py   # Offline rule-based student Q&A assistant
+    ├── resources.py            # Resource booking, return & maintenance transactions
+    ├── alerts.py               # Safety incident reporting & resolution lifecycle
+    └── analytics.py            # Aggregate institutional analytics & statistics
 ```
 
 ---
 
 ## Getting Started
 
+### 1. Prerequisites
+Python 3.9 or higher installed.
+
+### 2. Setup & Execution
+Clone the repository and open the project directory:
+
 ```bash
-git clone https://github.com/tushaar-05/Smart-Classroom-Management.git
-cd Smart-Classroom-Management
+cd SmartClassroom
+```
 
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+Initialize and populate the local SQLite demo database:
 
-pip install -r requirements.txt
-python3 seed.py                 # populates sample data
+```bash
+python3 seed.py
+```
+
+Run the application:
+
+```bash
 python3 main.py
 ```
 
-Requires **Python 3.9+**.
+---
+
+## Demo Login Credentials
+
+The `seed.py` script creates ready-to-use demo accounts for testing all three roles:
+
+| Role | Username | Password | Purpose |
+|---|---|---|---|
+| **Admin** | `admin` | `Admin@123` | Full administrative, user & resource control |
+| **Teacher** | `priya_t` | `Teacher@1` | Resources, safety alerts, analytics |
+| **Teacher** | `rahul_t` | `Teacher@2` | Second teacher account |
+| **Student** | `ananya_s` | `Pass@1234` | High attendance (88.9%) & good marks (78.3%) |
+| **Student** | `rohit_s` | `Pass@1234` | Low attendance (50.0%) & borderline marks (50.7%) |
+| **Student** | `pooja_s` | `Pass@1234` | Low attendance (50.0%) & borderline marks (51.3%) |
+
+*(All other demo student accounts use password: `Pass@1234`)*
 
 ---
 
-## Workflows
+## Deliberate Scope Limitations & Future Roadmap
 
-| Flow | Steps |
-|---|---|
-| **Academic** | Login → select class → mark attendance → enter marks → performance calculated → gaps flagged → report generated |
-| **Resource booking** | View resources → book → use → return |
-| **Safety incident** | Incident occurs → alert created → admin reviews → resolved |
+This prototype is intentionally designed as an offline software simulation for college demonstration:
+- **No Physical Hardware:** Alerts and resource tracking are software simulations; they are not wired to physical IoT sensors, RFID scanners, or fire panels.
+- **No Cloud / External APIs:** All data is kept in a local SQLite file. The learning assistant uses deterministic data queries without third-party LLM or machine learning APIs.
+- **No Biometrics:** Attendance is record-based rather than using facial recognition or fingerprint scanning.
 
----
-
-## Limitations
-
-By design, this prototype does **not** include: facial recognition, physical hardware integration (CCTV, fire panels), real-time push notifications, cloud infrastructure, machine learning, or external AI services. Each is a deliberate next step — see below.
-
-## Roadmap
-
-| Area | Planned |
-|---|---|
-| Attendance | Facial recognition, QR check-in, mobile app |
-| Resources | IoT-based tracking, automated status |
-| Safety | CCTV/fire-panel integration, SMS/email alerts |
-| Learning | LLM-backed assistant, predictive gap detection |
-| Analytics | ML forecasting, interactive dashboards |
-| Infrastructure | Web/mobile clients, cloud database |
-
----
-
-<div align="center">
-
-**SCMS** · built as an educational prototype for the *Smart Classroom Management Software* problem statement
-Govt. of NCT of Delhi · Education Department · 2024
-
-</div>
+### Planned Future Roadmap
+1. **Academic Entry:** Interactive forms for teachers to mark daily attendance and enter test marks directly via CLI/UI.
+2. **Automated Check-in:** Camera-based facial recognition or QR code scanning for classroom entry.
+3. **Hardware Integration:** IoT smart tags for resource tracking and physical fire panel / door relay triggers for safety alerts.
+4. **AI Assistant:** Optional integration with local or cloud LLMs for free-form conversational student tutoring.
+5. **Web & Mobile Frontends:** REST API backend and responsive web portal.
