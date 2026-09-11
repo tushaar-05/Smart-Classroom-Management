@@ -96,6 +96,34 @@ Administrators can:
 
 ---
 
+## Screenshots
+
+### 1. Login
+<!-- Add screenshot here -->
+
+### 2. Student Dashboard
+<!-- Add screenshot here -->
+
+### 3. Attendance
+<!-- Add screenshot here -->
+
+### 4. Learning Gaps / Learning Assistant
+<!-- Add screenshot here -->
+
+### 5. Resource Management
+<!-- Add screenshot here -->
+
+### 6. Safety & Security Alerts
+<!-- Add screenshot here -->
+
+### 7. Teacher Analytics
+<!-- Add screenshot here -->
+
+### 8. Admin Dashboard
+<!-- Add screenshot here -->
+
+---
+
 ## Tech Stack & Architecture
 
 - **Language:** Python 3.9+
