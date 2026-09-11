@@ -42,6 +42,12 @@ from modules.resources import (
     set_maintenance,
     release_maintenance,
 )
+from modules.alerts import (
+    get_active_alerts,
+    create_alert,
+    resolve_alert,
+    get_alert_history,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -730,6 +736,156 @@ def manage_resources(user) -> None:
 
 
 # ---------------------------------------------------------------------------
+# ── SAFETY & SECURITY ALERTS ───────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+
+def manage_alerts(user) -> None:
+    """
+    Submenu for Admin safety & security alert actions (software simulation):
+      1. View Active Alerts
+      2. Report Safety Alert
+      3. Resolve Alert
+      4. View Alert History
+      0. Back
+    """
+    while True:
+        _subheader("Safety & Security Alerts")
+        print("  [Simulated Prototype — Not connected to real emergency services]")
+        _line()
+        print("  1. View Active Alerts")
+        print("  2. Report Safety Alert")
+        print("  3. Resolve Alert")
+        print("  4. View Alert History")
+        print()
+        print("  0. Back")
+        print()
+        _line()
+
+        choice = input("  Enter your choice: ").strip()
+
+        # ── 0. Back ─────────────────────────────────────────────────────────
+        if choice == "0":
+            return
+
+        # ── 1. View Active Alerts ───────────────────────────────────────────
+        elif choice == "1":
+            _subheader("Active Safety Alerts")
+            active_alerts = get_active_alerts()
+            if not active_alerts:
+                print("  No active safety alerts.")
+            else:
+                for a in active_alerts:
+                    _line()
+                    print(f"  [ID #{a['id']}] [{a['alert_type']}]")
+                    print(f"  Location    : {a['location']}")
+                    print(f"  Description : {a['description']}")
+                    print(f"  Created     : {a['created_at']}")
+                    print(f"  Reported by : {a['creator_name']} ({a['creator_username']})")
+                _line()
+            _pause()
+
+        # ── 2. Report Safety Alert ──────────────────────────────────────────
+        elif choice == "2":
+            _subheader("Report Safety Alert")
+            print("  Select alert type:")
+            print("  1. Fire")
+            print("  2. Unauthorized Access")
+            print("  3. Medical")
+            print("  4. Other")
+            print("  0. Cancel")
+            print()
+
+            type_choice = input("  Enter choice (0-4): ").strip()
+            type_map = {
+                "1": "Fire",
+                "2": "Unauthorized Access",
+                "3": "Medical",
+                "4": "Other",
+            }
+            if type_choice == "0" or type_choice not in type_map:
+                if type_choice != "0":
+                    print("\n  Invalid alert type selected.")
+                    _pause()
+                continue
+
+            alert_type = type_map[type_choice]
+            location = input("  Location    : ").strip()
+            if not location:
+                print("\n  Location cannot be empty.")
+                _pause()
+                continue
+
+            description = input("  Description : ").strip()
+            if not description:
+                print("\n  Description cannot be empty.")
+                _pause()
+                continue
+
+            success, msg = create_alert(alert_type, location, description, user["id"])
+            if success:
+                print("\n  Safety alert reported successfully.")
+                print("  [Note: This is a software simulation and demonstration prototype.]")
+            else:
+                print(f"\n  Could not report alert: {msg}")
+            _pause()
+
+        # ── 3. Resolve Alert ────────────────────────────────────────────────
+        elif choice == "3":
+            _subheader("Resolve Safety Alert")
+            active_alerts = get_active_alerts()
+            if not active_alerts:
+                print("  No active safety alerts to resolve.")
+                _pause()
+                continue
+
+            print("  Active Alerts:")
+            print(f"  {'ID':<5} {'Type':<22} {'Location'}")
+            _line(width=60)
+            for a in active_alerts:
+                print(f"  {a['id']:<5} {a['alert_type']:<22} {a['location']}")
+            print()
+
+            id_input = input("  Enter alert ID to resolve (or '0' to cancel): ").strip()
+            if id_input == "0" or not id_input:
+                continue
+
+            if not id_input.isdigit():
+                print("\n  Invalid alert ID. Please enter a valid number.")
+                _pause()
+                continue
+
+            alert_id = int(id_input)
+            success, msg = resolve_alert(alert_id, user["id"])
+            print(f"\n  {msg}")
+            _pause()
+
+        # ── 4. View Alert History ────────────────────────────────────────────
+        elif choice == "4":
+            _subheader("Alert History")
+            alerts = get_alert_history()
+            if not alerts:
+                print("  No alert records found.")
+            else:
+                for a in alerts:
+                    _line()
+                    print(f"  [ID #{a['id']}] [{a['alert_type']}] — Status: {a['status']}")
+                    print(f"  Location    : {a['location']}")
+                    print(f"  Description : {a['description']}")
+                    print(f"  Created     : {a['created_at']}")
+                    if a["status"] == "Resolved" and a["resolved_at"]:
+                        print(f"  Resolved    : {a['resolved_at']}")
+                        if a["resolver_name"]:
+                            print(f"  Resolved by : {a['resolver_name']} ({a['resolver_username']})")
+                    print(f"  Reported by : {a['creator_name']} ({a['creator_username']})")
+                _line()
+            _pause()
+
+        else:
+            print("\n  Invalid choice.")
+            _pause()
+
+
+# ---------------------------------------------------------------------------
 # ── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
 # ---------------------------------------------------------------------------
 
@@ -754,6 +910,7 @@ def admin_menu(user) -> None:
         print("  2. Manage Classes")
         print("  3. Manage Subjects")
         print("  7. Manage Resources")
+        print("  8. Safety & Security Alerts")
         print()
 
         # ── Coming in later steps ────────────────────────────────────────────
@@ -761,7 +918,6 @@ def admin_menu(user) -> None:
         print("  4. Attendance Reports")
         print("  5. Marks Reports")
         print("  6. Learning Gaps")
-        print("  8. Safety Alerts")
         print("  9. Analytics")
         print()
 
@@ -789,7 +945,10 @@ def admin_menu(user) -> None:
         elif choice == "7":
             manage_resources(user)
 
-        elif choice in ("4", "5", "6", "8", "9"):
+        elif choice == "8":
+            manage_alerts(user)
+
+        elif choice in ("4", "5", "6", "9"):
             print()
             print("  This feature is not yet implemented.")
             print("  It will be available in a later development step.")
