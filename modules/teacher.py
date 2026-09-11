@@ -45,6 +45,14 @@ from modules.alerts import (
     resolve_alert,
     get_alert_history,
 )
+from modules.analytics import (
+    get_dashboard_summary,
+    get_attendance_analytics,
+    get_performance_analytics,
+    get_student_performance_summary,
+    get_resource_analytics,
+    get_alert_analytics,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -397,6 +405,166 @@ def manage_alerts_teacher(user) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Analytics & Reports Submenu
+# ---------------------------------------------------------------------------
+
+def manage_analytics_teacher(user) -> None:
+    """
+    Submenu for Teacher analytics and reporting:
+      1. Dashboard Summary
+      2. Attendance Analytics
+      3. Performance Analytics
+      4. Student Performance Summary
+      5. Resource Usage
+      6. Safety Alert Statistics
+      0. Back
+    """
+    while True:
+        _header("Analytics & Reports")
+        print("  1. Dashboard Summary")
+        print("  2. Attendance Analytics")
+        print("  3. Performance Analytics")
+        print("  4. Student Performance Summary")
+        print("  5. Resource Usage")
+        print("  6. Safety Alert Statistics")
+        print()
+        print("  0. Back")
+        print()
+        _line()
+
+        choice = input("  Enter your choice: ").strip()
+
+        # ── 0. Back ─────────────────────────────────────────────────────────
+        if choice == "0":
+            return
+
+        # ── 1. Dashboard Summary ────────────────────────────────────────────
+        elif choice == "1":
+            _header("System Dashboard Summary")
+            summary = get_dashboard_summary()
+            print()
+            print(f"  Students                  : {summary['total_students']}")
+            print(f"  Teachers                  : {summary['total_teachers']}")
+            print(f"  Resources                 : {summary['total_resources']}")
+            print(f"  Active Resource Bookings  : {summary['active_resource_bookings']}")
+            print(f"  Low Attendance Students   : {summary['low_attendance_students']}")
+            print(f"  Low Performance Students  : {summary['low_performance_students']}")
+            print(f"  Active Safety Alerts      : {summary['active_safety_alerts']}")
+            print()
+            _pause()
+
+        # ── 2. Attendance Analytics ─────────────────────────────────────────
+        elif choice == "2":
+            _header("Attendance Analytics")
+            att = get_attendance_analytics()
+            if att["total_records"] == 0:
+                print("\n  No attendance data available.")
+            else:
+                print()
+                print(f"  Total Students            : {att['total_students']}")
+                print(f"  Attendance Records        : {att['total_records']}")
+                print(f"  Overall Attendance        : {att['overall_percentage']:.2f}%")
+                print(f"  Below {int(att['threshold'])}%                 : {att['below_threshold']}")
+                print(f"  {int(att['threshold'])}% or Above              : {att['above_or_equal_threshold']}")
+                print()
+                print("  Subject-wise Attendance")
+                _line()
+                for s in att["subject_attendance"]:
+                    print(f"  {s['subject_name']:<30} {s['attendance_percentage']:.2f}%")
+            print()
+            _pause()
+
+        # ── 3. Performance Analytics ────────────────────────────────────────
+        elif choice == "3":
+            _header("Performance Analytics")
+            perf = get_performance_analytics()
+            if perf["total_students_with_marks"] == 0:
+                print("\n  No performance data available.")
+            else:
+                print()
+                print(f"  Students With Marks       : {perf['total_students_with_marks']}")
+                print(f"  Overall Performance       : {perf['overall_percentage']:.2f}%")
+                print(f"  Below {int(perf['threshold'])}%                 : {perf['below_threshold']}")
+                print(f"  {int(perf['threshold'])}% or Above              : {perf['above_or_equal_threshold']}")
+                print()
+                print("  Subject-wise Performance")
+                _line()
+                for s in perf["subject_performance"]:
+                    print(f"  {s['subject_name']:<30} {s['performance_percentage']:.2f}%")
+            print()
+            _pause()
+
+        # ── 4. Student Performance Summary ──────────────────────────────────
+        elif choice == "4":
+            _header("Student Performance Summary")
+            students = get_student_performance_summary()
+            if not students:
+                print("\n  No student records found.")
+            else:
+                print()
+                print(f"  {'Student':<20} {'Roll No':<12} {'Attendance':<18} {'Performance'}")
+                _line(width=72)
+                for s in students:
+                    if s["attendance_percentage"] is not None:
+                        att_str = f"{s['attendance_percentage']:.1f}% {s['attendance_status']}"
+                    else:
+                        att_str = "NO DATA"
+
+                    if s["performance_percentage"] is not None:
+                        perf_str = f"{s['performance_percentage']:.1f}% {s['performance_status']}"
+                    else:
+                        perf_str = "NO DATA"
+
+                    print(f"  {s['name']:<20} {s['roll_number']:<12} {att_str:<18} {perf_str}")
+            print()
+            _pause()
+
+        # ── 5. Resource Usage ───────────────────────────────────────────────
+        elif choice == "5":
+            _header("Resource Usage")
+            res = get_resource_analytics()
+            print()
+            print(f"  Total Resources           : {res['total_resources']}")
+            print(f"  Available                 : {res['available']}")
+            print(f"  In Use                    : {res['in_use']}")
+            print(f"  Maintenance               : {res['maintenance']}")
+            print()
+            print(f"  Total Bookings            : {res['total_bookings']}")
+            print(f"  Active Bookings           : {res['active_bookings']}")
+            print(f"  Completed Bookings        : {res['completed_bookings']}")
+            print()
+            print("  Booking Count by Resource")
+            _line()
+            for r in res["booking_counts"]:
+                print(f"  {r['resource_code']} {r['resource_name']:<25} {r['booking_count']}")
+            print()
+            _pause()
+
+        # ── 6. Safety Alert Statistics ──────────────────────────────────────
+        elif choice == "6":
+            _header("Safety Alert Statistics")
+            alt = get_alert_analytics()
+            if alt["total_alerts"] == 0:
+                print("\n  No safety alert data available.")
+            else:
+                print()
+                print(f"  Total Alerts              : {alt['total_alerts']}")
+                print(f"  Active Alerts             : {alt['active_alerts']}")
+                print(f"  Resolved Alerts           : {alt['resolved_alerts']}")
+                print()
+                print("  By Type")
+                _line()
+                for alert_type, count in alt["by_type"].items():
+                    print(f"  {alert_type:<25} {count}")
+            print()
+            _pause()
+
+        else:
+            print("\n  Invalid choice. Please enter a number from the menu.")
+            _pause()
+
+
+# ---------------------------------------------------------------------------
 # Teacher menu
 # ---------------------------------------------------------------------------
 
@@ -424,6 +592,7 @@ def teacher_menu(user) -> None:
         print("  5. View Learning Gaps")
         print("  6. Resource Management")
         print("  7. Safety & Security Alerts")
+        print("  8. Analytics & Reports")
         print()
         print("  0. Logout")
         print()
@@ -442,6 +611,9 @@ def teacher_menu(user) -> None:
 
         elif choice == "7":
             manage_alerts_teacher(user)
+
+        elif choice == "8":
+            manage_analytics_teacher(user)
 
         elif choice in ("1", "2", "3", "4", "5"):
             print()
